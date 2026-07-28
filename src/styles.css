@@ -84,4 +84,5 @@ textarea{resize:vertical; min-height:64px;}
 .checkbox-linha input{width:auto;margin:0;}
 .classificacao{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
 .classificacao span{font-size:11px;background:#f3f6fa;border:1px solid var(--borda);border-radius:20px;padding:3px 8px;color:var(--texto-sec);}
+.classificacao span:nth-child(4){background:#f3e8ff;border-color:#d8b4fe;color:#6b21a8;font-weight:600;}
 .reincidente{color:var(--vermelho-tx);font-weight:700;}
