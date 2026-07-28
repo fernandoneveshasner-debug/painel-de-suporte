@@ -29,3 +29,8 @@ npm run build
 A versão atual utiliza as tabelas `empresas` e `tipos_ocorrencia`. No formulário, o usuário pode selecionar uma sugestão existente ou digitar um novo valor. Empresas novas são cadastradas automaticamente; tipos novos entram com status `pendente` e passam a aparecer nas sugestões seguintes.
 
 A migration correspondente está em `supabase/migrations/002_classificacao_ocorrencias.sql`.
+
+
+## Categorias e tipos predefinidos
+
+Execute `supabase/migrations/003_categorias_e_tipos_predefinidos.sql` depois das migrations anteriores. O formulário passa a usar empresa fixa, categoria e tipo predefinido. Quando um tipo iniciado por “Outro” for escolhido, a descrição específica torna-se obrigatória.

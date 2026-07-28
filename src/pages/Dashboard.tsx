@@ -1,6 +1,6 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { supabase } from '../supabaseClient'
-import type { Empresa, Interacao, Tipo, TipoOcorrencia, Prioridade, Status } from '../types'
+import type { CategoriaOcorrencia, Empresa, Interacao, Tipo, TipoOcorrencia, Prioridade, Status } from '../types'
 
 const statusLabel: Record<Status, string> = {
   aberto: 'Aberto',
@@ -18,6 +18,7 @@ const prioridadeLabel: Record<Prioridade, string> = {
 export default function Dashboard() {
   const [interacoes, setInteracoes] = useState<Interacao[]>([])
   const [empresas, setEmpresas] = useState<Empresa[]>([])
+  const [categorias, setCategorias] = useState<CategoriaOcorrencia[]>([])
   const [tiposOcorrencia, setTiposOcorrencia] = useState<TipoOcorrencia[]>([])
   const [carregando, setCarregando] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
@@ -34,8 +35,10 @@ export default function Dashboard() {
   const [status, setStatus] = useState<Status>('andamento')
   const [proximaAcao, setProximaAcao] = useState('')
   const [arquivo, setArquivo] = useState<File | null>(null)
-  const [empresaNome, setEmpresaNome] = useState('')
-  const [tipoOcorrenciaNome, setTipoOcorrenciaNome] = useState('')
+  const [empresaId, setEmpresaId] = useState('')
+  const [categoriaId, setCategoriaId] = useState('')
+  const [tipoOcorrenciaId, setTipoOcorrenciaId] = useState('')
+  const [tipoOutro, setTipoOutro] = useState('')
   const [modulo, setModulo] = useState('')
   const [impacto, setImpacto] = useState('')
   const [reincidente, setReincidente] = useState(false)
@@ -52,7 +55,7 @@ export default function Dashboard() {
     setCarregando(true)
     const { data, error } = await supabase
       .from('suporte_interacoes')
-.select('*, empresas(nome), tipos_ocorrencia(nome)')
+.select('*, empresas(nome), tipos_ocorrencia(nome, categorias_ocorrencia(nome))')
       .order('criado_em', { ascending: false })
     if (error) {
       setErroCarregamento('Não foi possível carregar os registros: ' + error.message)
@@ -65,56 +68,19 @@ export default function Dashboard() {
   }
 
 
-  function normalizarTexto(valor: string) {
-    return valor
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-  }
-
   async function carregarCadastros() {
-    const [{ data: empresasData }, { data: tiposData }] = await Promise.all([
+    const [{ data: empresasData, error: empresasError }, { data: categoriasData, error: categoriasError }, { data: tiposData, error: tiposError }] = await Promise.all([
       supabase.from('empresas').select('id,nome,nome_normalizado,ativo').eq('ativo', true).order('nome'),
-      supabase.from('tipos_ocorrencia').select('id,nome,nome_normalizado,status').in('status', ['aprovado', 'pendente']).order('nome')
+      supabase.from('categorias_ocorrencia').select('id,nome,slug,ativo,ordem').eq('ativo', true).order('ordem'),
+      supabase.from('tipos_ocorrencia').select('id,nome,nome_normalizado,status,categoria_id').eq('status', 'aprovado').order('nome')
     ])
+    if (empresasError || categoriasError || tiposError) {
+      setErroCarregamento('Não foi possível carregar as opções de classificação.')
+      return
+    }
     setEmpresas((empresasData || []) as Empresa[])
+    setCategorias((categoriasData || []) as CategoriaOcorrencia[])
     setTiposOcorrencia((tiposData || []) as TipoOcorrencia[])
-  }
-
-  async function obterOuCriarEmpresa(nome: string) {
-    const normalizado = normalizarTexto(nome)
-    const existente = empresas.find(e => e.nome_normalizado === normalizado)
-    if (existente) return existente.id
-
-    const { data, error } = await supabase
-      .from('empresas')
-      .insert({ nome: nome.trim(), nome_normalizado: normalizado })
-      .select('id')
-      .single()
-    if (error) throw error
-    return data.id as string
-  }
-
-  async function obterOuCriarTipoOcorrencia(nome: string) {
-    const normalizado = normalizarTexto(nome)
-    const existente = tiposOcorrencia.find(t => t.nome_normalizado === normalizado)
-    if (existente) return existente.id
-
-    const { data: usuario } = await supabase.auth.getUser()
-    const { data, error } = await supabase
-      .from('tipos_ocorrencia')
-      .insert({
-        nome: nome.trim(),
-        nome_normalizado: normalizado,
-        status: 'pendente',
-        criado_por: usuario.user?.id || null
-      })
-      .select('id')
-      .single()
-    if (error) throw error
-    return data.id as string
   }
 
   async function gerarLinksAnexo(lista: Interacao[]) {
@@ -142,8 +108,10 @@ export default function Dashboard() {
     setStatus('andamento')
     setProximaAcao('')
     setArquivo(null)
-    setEmpresaNome('')
-    setTipoOcorrenciaNome('')
+    setEmpresaId('')
+    setCategoriaId('')
+    setTipoOcorrenciaId('')
+    setTipoOutro('')
     setModulo('')
     setImpacto('')
     setReincidente(false)
@@ -160,8 +128,10 @@ export default function Dashboard() {
     setPrioridade(item.prioridade)
     setStatus(item.status)
     setProximaAcao(item.proxima_acao || '')
-    setEmpresaNome(item.empresas?.nome || '')
-    setTipoOcorrenciaNome(item.tipos_ocorrencia?.nome || '')
+    setEmpresaId(item.empresa_id || '')
+    setCategoriaId(item.tipos_ocorrencia?.categorias_ocorrencia ? tiposOcorrencia.find(t => t.id === item.tipo_ocorrencia_id)?.categoria_id || '' : '')
+    setTipoOcorrenciaId(item.tipo_ocorrencia_id || '')
+    setTipoOutro(item.tipo_ocorrencia_outro || '')
     setModulo(item.modulo || '')
     setImpacto(item.impacto || '')
     setReincidente(item.reincidente || false)
@@ -171,8 +141,13 @@ export default function Dashboard() {
   async function salvar(e: FormEvent) {
     e.preventDefault()
     setMensagem('')
-    if (!contato.trim() || !assunto.trim() || !empresaNome.trim() || !tipoOcorrenciaNome.trim()) {
-      alert('Preencha contato, empresa, tipo de ocorrência e assunto.')
+    const tipoSelecionado = tiposOcorrencia.find(item => item.id === tipoOcorrenciaId)
+    if (!contato.trim() || !assunto.trim() || !empresaId || !categoriaId || !tipoOcorrenciaId) {
+      alert('Preencha contato, empresa, categoria, tipo de ocorrência e assunto.')
+      return
+    }
+    if (tipoSelecionado?.nome_normalizado.startsWith('outro ') && !tipoOutro.trim()) {
+      alert('Descreva o motivo ao selecionar uma opção “Outro”.')
       return
     }
 
@@ -189,24 +164,14 @@ export default function Dashboard() {
       anexo_path = caminho
     }
 
-    let empresa_id: string
-    let tipo_ocorrencia_id: string
-    try {
-      empresa_id = await obterOuCriarEmpresa(empresaNome)
-      tipo_ocorrencia_id = await obterOuCriarTipoOcorrencia(tipoOcorrenciaNome)
-    } catch (error) {
-      const mensagemErro = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert('Não foi possível salvar a classificação: ' + mensagemErro)
-      return
-    }
-
     const dados = {
       tipo, contato, canal, assunto,
       descricao: descricao || null,
       prioridade, status,
       proxima_acao: proximaAcao || null,
-      empresa_id,
-      tipo_ocorrencia_id,
+      empresa_id: empresaId,
+      tipo_ocorrencia_id: tipoOcorrenciaId,
+      tipo_ocorrencia_outro: tipoOutro.trim() || null,
       modulo: modulo || null,
       impacto: impacto || null,
       reincidente,
@@ -285,28 +250,53 @@ export default function Dashboard() {
             </div>
 
             <label>Empresa</label>
-            <input
-              list="empresas-sugestoes"
-              value={empresaNome}
-              onChange={e => setEmpresaNome(e.target.value)}
-              placeholder="Digite ou selecione a empresa"
-            />
-            <datalist id="empresas-sugestoes">
-              {empresas.map(empresa => <option key={empresa.id} value={empresa.nome} />)}
-            </datalist>
-            <small className="ajuda-campo">Uma empresa nova será cadastrada automaticamente.</small>
+            <select value={empresaId} onChange={e => setEmpresaId(e.target.value)} required>
+              <option value="">Selecione a empresa</option>
+              {empresas.map(empresa => <option key={empresa.id} value={empresa.id}>{empresa.nome}</option>)}
+            </select>
+            <small className="ajuda-campo">Somente as três empresas oficiais podem ser selecionadas.</small>
+
+            <label>Categoria da ocorrência</label>
+            <select
+              value={categoriaId}
+              onChange={e => {
+                setCategoriaId(e.target.value)
+                setTipoOcorrenciaId('')
+                setTipoOutro('')
+              }}
+              required
+            >
+              <option value="">Selecione a categoria</option>
+              {categorias.map(categoria => <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>)}
+            </select>
 
             <label>Tipo de ocorrência</label>
-            <input
-              list="tipos-ocorrencia-sugestoes"
-              value={tipoOcorrenciaNome}
-              onChange={e => setTipoOcorrenciaNome(e.target.value)}
-              placeholder="Ex: Falha ao emitir relatório"
-            />
-            <datalist id="tipos-ocorrencia-sugestoes">
-              {tiposOcorrencia.map(item => <option key={item.id} value={item.nome} />)}
-            </datalist>
-            <small className="ajuda-campo">Ao digitar um tipo novo, ele será salvo como pendente e aparecerá nas próximas ocorrências.</small>
+            <select
+              value={tipoOcorrenciaId}
+              onChange={e => {
+                setTipoOcorrenciaId(e.target.value)
+                setTipoOutro('')
+              }}
+              disabled={!categoriaId}
+              required
+            >
+              <option value="">{categoriaId ? 'Selecione o tipo' : 'Selecione primeiro a categoria'}</option>
+              {tiposOcorrencia
+                .filter(item => item.categoria_id === categoriaId)
+                .map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
+            </select>
+
+            {tiposOcorrencia.find(item => item.id === tipoOcorrenciaId)?.nome_normalizado.startsWith('outro ') && (
+              <>
+                <label>Descreva o motivo</label>
+                <input
+                  value={tipoOutro}
+                  onChange={e => setTipoOutro(e.target.value)}
+                  placeholder="Informe o motivo específico"
+                  required
+                />
+              </>
+            )}
 
             <label>Nome do contato</label>
             <input value={contato} onChange={e => setContato(e.target.value)} placeholder="Ex: João Silva / Time Backend" />
@@ -420,7 +410,9 @@ export default function Dashboard() {
                         {(i.empresas?.nome || i.tipos_ocorrencia?.nome) && (
                           <div className="classificacao">
                             {i.empresas?.nome && <span>{i.empresas.nome}</span>}
+                            {i.tipos_ocorrencia?.categorias_ocorrencia?.nome && <span>{i.tipos_ocorrencia.categorias_ocorrencia.nome}</span>}
                             {i.tipos_ocorrencia?.nome && <span>{i.tipos_ocorrencia.nome}</span>}
+                            {i.tipo_ocorrencia_outro && <span>{i.tipo_ocorrencia_outro}</span>}
                           </div>
                         )}
                       </div>
