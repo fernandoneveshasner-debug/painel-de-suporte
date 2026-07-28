@@ -9,11 +9,20 @@ export interface Empresa {
   ativo: boolean
 }
 
+export interface CategoriaOcorrencia {
+  id: string
+  nome: string
+  slug: string
+  ativo: boolean
+  ordem: number
+}
+
 export interface TipoOcorrencia {
   id: string
   nome: string
   nome_normalizado: string
   status: 'aprovado' | 'pendente' | 'mesclado' | 'inativo'
+  categoria_id: string | null
 }
 
 export interface Interacao {
@@ -38,5 +47,6 @@ export interface Interacao {
   reincidente: boolean
   encaminhado_desenvolvimento: boolean
   empresas?: { nome: string } | null
-  tipos_ocorrencia?: { nome: string } | null
+  tipos_ocorrencia?: { nome: string; categorias_ocorrencia?: { nome: string } | null } | null
+  tipo_ocorrencia_outro: string | null
 }
