@@ -73,3 +73,15 @@ textarea{resize:vertical; min-height:64px;}
 .login-card h1{font-size:18px; margin:0 0 20px; color:var(--azul-900);}
 .login-card button{margin-top:16px; width:100%; padding:11px; border:none; border-radius:9px; background:var(--azul-700); color:#fff; font-weight:600; cursor:pointer;}
 .erro{color:var(--vermelho-tx); font-size:12.5px; margin-top:8px;}
+
+.numero-registro{display:flex;justify-content:space-between;gap:12px;align-items:center;background:var(--azul-100);border:1px solid #c8ddf0;border-radius:9px;padding:10px 12px;margin-bottom:14px;}
+.numero-registro span{font-size:12px;color:var(--texto-sec);font-weight:600;}
+.numero-registro strong{font-size:13px;color:var(--azul-900);text-align:right;}
+.mensagem-sucesso{background:var(--verde-bg);color:var(--verde-tx);border:1px solid #b7dfd1;border-radius:8px;padding:9px 10px;font-size:12.5px;margin-bottom:12px;}
+.erro-lista{background:var(--vermelho-bg);color:var(--vermelho-tx);border:1px solid #efcaca;border-radius:8px;padding:12px;font-size:12.5px;}
+.ajuda-campo{display:block;margin-top:5px;color:var(--texto-sec);font-size:11px;line-height:1.35;}
+.checkbox-linha{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--texto);font-weight:500;}
+.checkbox-linha input{width:auto;margin:0;}
+.classificacao{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+.classificacao span{font-size:11px;background:#f3f6fa;border:1px solid var(--borda);border-radius:20px;padding:3px 8px;color:var(--texto-sec);}
+.reincidente{color:var(--vermelho-tx);font-weight:700;}
