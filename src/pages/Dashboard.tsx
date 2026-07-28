@@ -1,6 +1,6 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { supabase } from '../supabaseClient'
-import type { CategoriaOcorrencia, Empresa, Interacao, Tipo, TipoOcorrencia, Prioridade, Status } from '../types'
+import type { CategoriaOcorrencia, ContatoNotificacao, Empresa, Interacao, Tipo, TipoOcorrencia, Prioridade, Status } from '../types'
 
 const statusLabel: Record<Status, string> = {
   aberto: 'Aberto',
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [categorias, setCategorias] = useState<CategoriaOcorrencia[]>([])
   const [tiposOcorrencia, setTiposOcorrencia] = useState<TipoOcorrencia[]>([])
+  const [contatosNotificacao, setContatosNotificacao] = useState<ContatoNotificacao[]>([])
   const [carregando, setCarregando] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
   const [editNumero, setEditNumero] = useState<number | null>(null)
@@ -39,6 +40,8 @@ export default function Dashboard() {
   const [categoriaId, setCategoriaId] = useState('')
   const [tipoOcorrenciaId, setTipoOcorrenciaId] = useState('')
   const [tipoOutro, setTipoOutro] = useState('')
+  const [solicitanteId, setSolicitanteId] = useState('')
+  const [destinatarioId, setDestinatarioId] = useState('')
   const [modulo, setModulo] = useState('')
   const [impacto, setImpacto] = useState('')
   const [reincidente, setReincidente] = useState(false)
@@ -55,31 +58,49 @@ export default function Dashboard() {
     setCarregando(true)
     const { data, error } = await supabase
       .from('suporte_interacoes')
-      .select('*, empresas(nome), tipos_ocorrencia(nome, categorias_ocorrencia(nome))')
+      .select(`
+        *,
+        empresas(nome),
+        tipos_ocorrencia(nome, categorias_ocorrencia(nome)),
+        solicitante:contatos_notificacao!suporte_interacoes_solicitante_contato_id_fkey(nome,email),
+        destinatario:contatos_notificacao!suporte_interacoes_destinatario_contato_id_fkey(nome,email),
+        respondido_por:contatos_notificacao!suporte_interacoes_respondido_por_contato_id_fkey(nome,email)
+      `)
       .order('criado_em', { ascending: false })
     if (error) {
       setErroCarregamento('Não foi possível carregar os registros: ' + error.message)
     } else if (data) {
       setErroCarregamento('')
-      setInteracoes(data as Interacao[])
-      gerarLinksAnexo(data as Interacao[])
+      setInteracoes(data as unknown as Interacao[])
+      gerarLinksAnexo(data as unknown as Interacao[])
     }
     setCarregando(false)
   }
 
   async function carregarCadastros() {
-    const [{ data: empresasData, error: empresasError }, { data: categoriasData, error: categoriasError }, { data: tiposData, error: tiposError }] = await Promise.all([
+    const [
+      { data: empresasData, error: empresasError },
+      { data: categoriasData, error: categoriasError },
+      { data: tiposData, error: tiposError },
+      { data: contatosData, error: contatosError }
+    ] = await Promise.all([
       supabase.from('empresas').select('id,nome,nome_normalizado,ativo').eq('ativo', true).order('nome'),
       supabase.from('categorias_ocorrencia').select('id,nome,slug,ativo,ordem').eq('ativo', true).order('ordem'),
-      supabase.from('tipos_ocorrencia').select('id,nome,nome_normalizado,status,categoria_id').eq('status', 'aprovado').order('nome')
+      supabase.from('tipos_ocorrencia').select('id,nome,nome_normalizado,status,categoria_id').eq('status', 'aprovado').order('nome'),
+      supabase
+        .from('contatos_notificacao')
+        .select('id,papel,nome,email,ativo,recebe_solicitacoes,recebe_respostas,recebe_copia_todas')
+        .eq('ativo', true)
+        .order('nome')
     ])
-    if (empresasError || categoriasError || tiposError) {
-      setErroCarregamento('Não foi possível carregar as opções de classificação.')
+    if (empresasError || categoriasError || tiposError || contatosError) {
+      setErroCarregamento('Não foi possível carregar as opções de classificação e encaminhamento.')
       return
     }
     setEmpresas((empresasData || []) as Empresa[])
     setCategorias((categoriasData || []) as CategoriaOcorrencia[])
     setTiposOcorrencia((tiposData || []) as TipoOcorrencia[])
+    setContatosNotificacao((contatosData || []) as ContatoNotificacao[])
   }
 
   async function gerarLinksAnexo(lista: Interacao[]) {
@@ -111,6 +132,8 @@ export default function Dashboard() {
     setCategoriaId('')
     setTipoOcorrenciaId('')
     setTipoOutro('')
+    setSolicitanteId('')
+    setDestinatarioId('')
     setModulo('')
     setImpacto('')
     setReincidente(false)
@@ -131,6 +154,8 @@ export default function Dashboard() {
     setCategoriaId(item.tipos_ocorrencia?.categorias_ocorrencia ? tiposOcorrencia.find(t => t.id === item.tipo_ocorrencia_id)?.categoria_id || '' : '')
     setTipoOcorrenciaId(item.tipo_ocorrencia_id || '')
     setTipoOutro(item.tipo_ocorrencia_outro || '')
+    setSolicitanteId(item.solicitante_contato_id || '')
+    setDestinatarioId(item.destinatario_contato_id || '')
     setModulo(item.modulo || '')
     setImpacto(item.impacto || '')
     setReincidente(item.reincidente || false)
@@ -141,8 +166,9 @@ export default function Dashboard() {
     e.preventDefault()
     setMensagem('')
     const tipoSelecionado = tiposOcorrencia.find(item => item.id === tipoOcorrenciaId)
-    if (!contato.trim() || !assunto.trim() || !empresaId || !categoriaId || !tipoOcorrenciaId) {
-      alert('Preencha contato, empresa, categoria, tipo de ocorrência e assunto.')
+    const solicitanteSelecionado = contatosNotificacao.find(item => item.id === solicitanteId)
+    if (!assunto.trim() || !empresaId || !categoriaId || !tipoOcorrenciaId || !solicitanteId || !destinatarioId) {
+      alert('Preencha solicitante, destinatário, empresa, categoria, tipo de ocorrência e assunto.')
       return
     }
     if (tipoSelecionado?.nome_normalizado.startsWith('outro ') && !tipoOutro.trim()) {
@@ -164,13 +190,19 @@ export default function Dashboard() {
     }
 
     const dados = {
-      tipo, contato, canal, assunto,
+      tipo,
+      contato: contato.trim() || solicitanteSelecionado?.nome || 'Não informado',
+      canal,
+      assunto,
       descricao: descricao || null,
-      prioridade, status,
+      prioridade,
+      status,
       proxima_acao: proximaAcao || null,
       empresa_id: empresaId,
       tipo_ocorrencia_id: tipoOcorrenciaId,
       tipo_ocorrencia_outro: tipoOutro.trim() || null,
+      solicitante_contato_id: solicitanteId,
+      destinatario_contato_id: destinatarioId,
       modulo: modulo || null,
       impacto: impacto || null,
       reincidente,
@@ -210,7 +242,12 @@ export default function Dashboard() {
   const filtradas = interacoes.filter(i => {
     if (filtroTipo && i.tipo !== filtroTipo) return false
     if (filtroStatus && i.status !== filtroStatus) return false
-    if (busca && !(i.contato.toLowerCase().includes(busca.toLowerCase()) || i.assunto.toLowerCase().includes(busca.toLowerCase()))) return false
+    if (busca && !(
+      i.contato.toLowerCase().includes(busca.toLowerCase()) ||
+      i.assunto.toLowerCase().includes(busca.toLowerCase()) ||
+      i.solicitante?.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      i.destinatario?.nome.toLowerCase().includes(busca.toLowerCase())
+    )) return false
     return true
   })
 
@@ -247,6 +284,28 @@ export default function Dashboard() {
               <button type="button" className={tipo === 'cliente' ? 'ativo-cliente' : ''} onClick={() => { setTipo('cliente'); setCanal('WhatsApp') }}>Cliente</button>
               <button type="button" className={tipo === 'desenvolvimento' ? 'ativo-dev' : ''} onClick={() => { setTipo('desenvolvimento'); setCanal('Sistema interno') }}>Desenvolvimento</button>
             </div>
+
+            <div className="row2">
+              <div>
+                <label>Solicitante</label>
+                <select value={solicitanteId} onChange={e => setSolicitanteId(e.target.value)} required>
+                  <option value="">Selecione</option>
+                  {contatosNotificacao
+                    .filter(item => item.recebe_respostas)
+                    .map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label>Destinatário</label>
+                <select value={destinatarioId} onChange={e => setDestinatarioId(e.target.value)} required>
+                  <option value="">Selecione</option>
+                  {contatosNotificacao
+                    .filter(item => item.recebe_solicitacoes)
+                    .map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
+                </select>
+              </div>
+            </div>
+            <small className="ajuda-campo">O e-mail será enviado automaticamente ao destinatário, com cópia para o solicitante e para Dimas.</small>
 
             <label>Empresa</label>
             <select value={empresaId} onChange={e => setEmpresaId(e.target.value)} required>
@@ -297,8 +356,8 @@ export default function Dashboard() {
               </>
             )}
 
-            <label>Nome do contato</label>
-            <input value={contato} onChange={e => setContato(e.target.value)} placeholder="Ex: João Silva / Time Backend" />
+            <label>Contato relacionado (opcional)</label>
+            <input value={contato} onChange={e => setContato(e.target.value)} placeholder="Ex: colaborador afetado ou equipe envolvida" />
 
             <label>Canal</label>
             <select value={canal} onChange={e => setCanal(e.target.value)}>
@@ -406,6 +465,13 @@ export default function Dashboard() {
                         </span>
                         <h3>#{String(i.numero).padStart(4, '0')} · {i.assunto}</h3>
                         <div className="contato">{i.contato} · {i.canal}</div>
+                        {(i.solicitante || i.destinatario) && (
+                          <div className="contato">
+                            {i.solicitante && <>Solicitante: <b>{i.solicitante.nome}</b></>}
+                            {i.solicitante && i.destinatario && ' · '}
+                            {i.destinatario && <>Destinatário: <b>{i.destinatario.nome}</b></>}
+                          </div>
+                        )}
                         {(i.empresas?.nome || i.tipos_ocorrencia?.nome) && (
                           <div className="classificacao">
                             {i.empresas?.nome && <span>{i.empresas.nome}</span>}
