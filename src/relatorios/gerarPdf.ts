@@ -2,6 +2,7 @@ import type { TDocumentDefinitions, Content } from 'pdfmake/interfaces'
 import type { Interacao, Empresa, ContatoNotificacao } from '../types'
 import { FiltrosRelatorio, rotuloFiltros, nomeArquivo, formatarData, formatarDataHora } from './filtros'
 import { calcularResumo, ResumoRelatorio } from './metricas'
+import { baixarArquivo } from './download'
 
 const AZUL = '#0f4c81'
 const CINZA = '#5b6b80'
@@ -145,10 +146,17 @@ export async function gerarPdf(
   ])
   // pdfmake e vfs_fonts variam a forma do export entre versões — resolver defensivamente.
   const pdfMake: any = (pdfMakeMod as any).default ?? pdfMakeMod
-  const vfs: any = (vfsMod as any).default ?? vfsMod
-  pdfMake.vfs = vfs?.pdfMake?.vfs ?? vfs?.vfs ?? pdfMake.vfs
+  // As fontes vêm como chaves de topo do módulo vfs_fonts (ex.: 'Roboto-Regular.ttf').
+  // O export default do módulo é o próprio dicionário de fontes.
+  pdfMake.vfs = (vfsMod as any).default ?? vfsMod
 
   const resumo = calcularResumo(chamados)
   const doc = montarDocDefinition(chamados, resumo, f, empresas, contatos, logo)
-  pdfMake.createPdf(doc).download(nomeArquivo(f, 'pdf'))
+
+  // Baixa via Blob + âncora (mesmo mecanismo do TXT, confiável entre navegadores).
+  // O .download() interno do pdfmake falha silenciosamente em alguns navegadores.
+  const blob = await new Promise<Blob>((resolve) => {
+    pdfMake.createPdf(doc).getBlob((b: Blob) => resolve(b))
+  })
+  baixarArquivo(nomeArquivo(f, 'pdf'), blob, 'application/pdf')
 }
