@@ -97,7 +97,7 @@ export function montarDocDefinition(
         style: 'bloco',
         table: {
           headerRows: 1,
-          widths: [26, 42, '*', '*', 26, 28, 44, '*', '*'],
+          widths: [26, 52, '*', '*', 28, 26, 46, '*', '*'],
           body: [cabecalhoTabela, ...linhas]
         },
         layout: {
