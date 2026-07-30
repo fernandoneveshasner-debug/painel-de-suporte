@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/supabaseClient.ts","./src/types.ts","./src/vite-env.d.ts","./src/pages/Dashboard.tsx","./src/pages/Login.tsx"],"errors":true,"version":"5.8.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/supabaseclient.ts","./src/types.ts","./src/vite-env.d.ts","./src/pages/dashboard.tsx","./src/pages/login.tsx","./src/relatorios/relatorioscard.tsx","./src/relatorios/download.ts","./src/relatorios/filtros.ts","./src/relatorios/gerarpdf.ts","./src/relatorios/gerartxt.ts","./src/relatorios/metricas.ts"],"version":"5.9.3"}
