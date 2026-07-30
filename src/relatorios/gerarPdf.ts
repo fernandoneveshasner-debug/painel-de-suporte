@@ -45,7 +45,7 @@ export function montarDocDefinition(
       {
         stack: [
           { text: 'Relatório de Chamados', style: 'titulo' },
-          { text: 'Painel de Suporte — Neves Tecnologia', color: CINZA, fontSize: 9 }
+          { text: 'Painel de Suporte', color: CINZA, fontSize: 9 }
         ],
         margin: [logo ? 8 : 0, 2, 0, 0]
       },
@@ -126,7 +126,7 @@ export function montarDocDefinition(
     defaultStyle: { fontSize: 9 },
     footer: (currentPage: number, pageCount: number): Content => ({
       columns: [
-        { text: 'Painel de Suporte — Neves Tecnologia', fontSize: 7, color: CINZA, margin: [28, 0, 0, 0] },
+        { text: 'Painel de Suporte', fontSize: 7, color: CINZA, margin: [28, 0, 0, 0] },
         { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 7, color: CINZA, margin: [0, 0, 28, 0] }
       ]
     })
