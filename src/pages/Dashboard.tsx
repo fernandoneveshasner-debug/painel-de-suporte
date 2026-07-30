@@ -1,6 +1,7 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { supabase } from '../supabaseClient'
 import type { CategoriaOcorrencia, ContatoNotificacao, Empresa, Interacao, Tipo, TipoOcorrencia, Prioridade, Status } from '../types'
+import RelatoriosCard from '../relatorios/RelatoriosCard'
 
 const statusLabel: Record<Status, string> = {
   aberto: 'Aberto',
@@ -433,6 +434,8 @@ export default function Dashboard() {
               <div className="box"><b>{clientes}</b><span>Clientes</span></div>
               <div className="box"><b>{dev}</b><span>Desenvolvimento</span></div>
             </div>
+
+            <RelatoriosCard empresas={empresas} contatos={contatosNotificacao} />
 
             <div className="card">
               <h2>Histórico de interações</h2>
