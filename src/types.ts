@@ -49,6 +49,7 @@ export interface Interacao {
   proxima_acao: string | null
   anexo_path: string | null
   criado_em: string
+  atualizado_em: string | null
   empresa_id: string | null
   tipo_ocorrencia_id: string | null
   solicitante_contato_id: string | null
