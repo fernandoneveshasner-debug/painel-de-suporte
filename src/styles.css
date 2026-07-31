@@ -84,4 +84,11 @@ textarea{resize:vertical; min-height:64px;}
 .checkbox-linha input{width:auto;margin:0;}
 .classificacao{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
 .classificacao span{font-size:11px;background:#f3f6fa;border:1px solid var(--borda);border-radius:20px;padding:3px 8px;color:var(--texto-sec);}
+.classificacao span:nth-child(4){background:#6b21a8;border-color:#6b21a8;color:#fff;font-weight:700;}
 .reincidente{color:var(--vermelho-tx);font-weight:700;}
+
+.card-relatorios{margin-bottom:18px;}
+.card-relatorios .ajuda-campo{margin-bottom:6px;}
+.relatorios-botoes{display:flex;gap:10px;margin-top:16px;}
+.relatorios-botoes button{margin-top:0;flex:1;}
+.relatorios-botoes button:disabled{opacity:.6;cursor:default;}
